@@ -1,16 +1,30 @@
 //
-//  MJRefreshStateTrailer.m
+//  MJRefreshAutoStateFooter.m
 //  MJRefresh
 //
-//  Created by kinarobin on 2020/5/3.
-//  Copyright © 2020 小码哥. All rights reserved.
+//  Created by MJ Lee on 15/6/13.
+//  Copyright © 2015年 小码哥. All rights reserved.
 //
 
-#import "MJRefreshStateTrailer.h"
+#import "MJRefreshAutoStateFooter.h"
 #import "NSBundle+MJRefresh.h"
-#import "UIView+MJExtension.h"
 
-@interface MJRefreshStateTrailer() {
+@interface MJRefreshAutoFooter (TapTriggerFix)
+
+- (void)beginRefreshingWithoutValidation;
+@end
+
+
+@implementation MJRefreshAutoFooter (TapTriggerFix)
+
+- (void)beginRefreshingWithoutValidation {
+    [super beginRefreshing];
+}
+
+@end
+
+@interface MJRefreshAutoStateFooter()
+{
     /** 显示刷新状态的label */
     __unsafe_unretained UILabel *_stateLabel;
 }
@@ -18,44 +32,66 @@
 @property (strong, nonatomic) NSMutableDictionary *stateTitles;
 @end
 
-@implementation MJRefreshStateTrailer
+@implementation MJRefreshAutoStateFooter
 #pragma mark - 懒加载
-- (NSMutableDictionary *)stateTitles {
+- (NSMutableDictionary *)stateTitles
+{
     if (!_stateTitles) {
         self.stateTitles = [NSMutableDictionary dictionary];
     }
     return _stateTitles;
 }
 
-- (UILabel *)stateLabel {
+- (UILabel *)stateLabel
+{
     if (!_stateLabel) {
-        UILabel *stateLabel = [UILabel mj_label];
-        stateLabel.numberOfLines = 0;
-        [self addSubview:_stateLabel = stateLabel];
+        [self addSubview:_stateLabel = [UILabel mj_label]];
     }
     return _stateLabel;
 }
 
 #pragma mark - 公共方法
-- (instancetype)setTitle:(NSString *)title forState:(MJRefreshState)state {
+- (instancetype)setTitle:(NSString *)title forState:(MJRefreshState)state
+{
     if (title == nil) return self;
     self.stateTitles[@(state)] = title;
     self.stateLabel.text = self.stateTitles[@(self.state)];
     return self;
 }
 
-- (void)textConfiguration {
-    // 初始化文字
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerIdleText] forState:MJRefreshStateIdle];
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerPullingText] forState:MJRefreshStatePulling];
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerPullingText] forState:MJRefreshStateRefreshing];
+#pragma mark - 私有方法
+- (void)stateLabelClick
+{
+    if (self.state == MJRefreshStateIdle) {
+        [super beginRefreshingWithoutValidation];
+    }
 }
 
-#pragma mark - 覆盖父类的方法
-- (void)prepare {
+- (void)textConfiguration {
+    // 初始化文字
+    [self setTitle];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setTitle) name:@"didChangeLanguageNotification" object:nil];
+}
+
+- (void)setTitle {
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterIdleText] forState:MJRefreshStateIdle];
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterRefreshingText] forState:MJRefreshStateRefreshing];
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterNoMoreDataText] forState:MJRefreshStateNoMoreData];
+}
+
+#pragma mark - 重写父类的方法
+- (void)prepare
+{
     [super prepare];
     
+    // 初始化间距
+    self.labelLeftInset = MJRefreshLabelLeftInset;
+    
     [self textConfiguration];
+    
+    // 监听label
+    self.stateLabel.userInteractionEnabled = YES;
+    [self.stateLabel addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(stateLabelClick)]];
 }
 
 - (void)i18nDidChange {
@@ -64,23 +100,25 @@
     [super i18nDidChange];
 }
 
-- (void)setState:(MJRefreshState)state {
-    MJRefreshCheckState
-    // 设置状态文字
-    self.stateLabel.text = self.stateTitles[@(state)];
-}
 
-- (void)placeSubviews {
+- (void)placeSubviews
+{
     [super placeSubviews];
     
-    if (self.stateLabel.hidden) return;
+    if (self.stateLabel.constraints.count) return;
     
-    BOOL noConstrainsOnStatusLabel = self.stateLabel.constraints.count == 0;
-    CGFloat stateLabelW = ceil(self.stateLabel.font.pointSize);
-    // 状态
-    if (noConstrainsOnStatusLabel) {
-        self.stateLabel.center = CGPointMake(self.mj_w * 0.5, self.mj_h * 0.5);
-        self.stateLabel.mj_size = CGSizeMake(stateLabelW, self.mj_h) ;
+    // 状态标签
+    self.stateLabel.frame = self.bounds;
+}
+
+- (void)setState:(MJRefreshState)state
+{
+    MJRefreshCheckState
+    
+    if (self.isRefreshingTitleHidden && state == MJRefreshStateRefreshing) {
+        self.stateLabel.text = nil;
+    } else {
+        self.stateLabel.text = self.stateTitles[@(state)];
     }
 }
 
@@ -89,5 +127,4 @@
         self.stateLabel
     ];
 }
-
 @end

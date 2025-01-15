@@ -1,29 +1,15 @@
 //
-//  MJRefreshAutoStateFooter.m
+//  MJRefreshBackStateFooter.m
 //  MJRefresh
 //
 //  Created by MJ Lee on 15/6/13.
 //  Copyright © 2015年 小码哥. All rights reserved.
 //
 
-#import "MJRefreshAutoStateFooter.h"
+#import "MJRefreshBackStateFooter.h"
 #import "NSBundle+MJRefresh.h"
 
-@interface MJRefreshAutoFooter (TapTriggerFix)
-
-- (void)beginRefreshingWithoutValidation;
-@end
-
-
-@implementation MJRefreshAutoFooter (TapTriggerFix)
-
-- (void)beginRefreshingWithoutValidation {
-    [super beginRefreshing];
-}
-
-@end
-
-@interface MJRefreshAutoStateFooter()
+@interface MJRefreshBackStateFooter()
 {
     /** 显示刷新状态的label */
     __unsafe_unretained UILabel *_stateLabel;
@@ -32,7 +18,7 @@
 @property (strong, nonatomic) NSMutableDictionary *stateTitles;
 @end
 
-@implementation MJRefreshAutoStateFooter
+@implementation MJRefreshBackStateFooter
 #pragma mark - 懒加载
 - (NSMutableDictionary *)stateTitles
 {
@@ -59,19 +45,21 @@
     return self;
 }
 
-#pragma mark - 私有方法
-- (void)stateLabelClick
-{
-    if (self.state == MJRefreshStateIdle) {
-        [super beginRefreshingWithoutValidation];
-    }
+- (NSString *)titleForState:(MJRefreshState)state {
+  return self.stateTitles[@(state)];
 }
 
 - (void)textConfiguration {
     // 初始化文字
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterIdleText] forState:MJRefreshStateIdle];
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterRefreshingText] forState:MJRefreshStateRefreshing];
-    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshAutoFooterNoMoreDataText] forState:MJRefreshStateNoMoreData];
+    [self setTitle];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setTitle) name:@"didChangeLanguageNotification" object:nil];
+}
+
+- (void)setTitle {
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshBackFooterIdleText] forState:MJRefreshStateIdle];
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshBackFooterPullingText] forState:MJRefreshStatePulling];
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshBackFooterRefreshingText] forState:MJRefreshStateRefreshing];
+    [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshBackFooterNoMoreDataText] forState:MJRefreshStateNoMoreData];
 }
 
 #pragma mark - 重写父类的方法
@@ -81,12 +69,7 @@
     
     // 初始化间距
     self.labelLeftInset = MJRefreshLabelLeftInset;
-    
     [self textConfiguration];
-    
-    // 监听label
-    self.stateLabel.userInteractionEnabled = YES;
-    [self.stateLabel addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(stateLabelClick)]];
 }
 
 - (void)i18nDidChange {
@@ -94,7 +77,6 @@
     
     [super i18nDidChange];
 }
-
 
 - (void)placeSubviews
 {
@@ -110,11 +92,8 @@
 {
     MJRefreshCheckState
     
-    if (self.isRefreshingTitleHidden && state == MJRefreshStateRefreshing) {
-        self.stateLabel.text = nil;
-    } else {
-        self.stateLabel.text = self.stateTitles[@(state)];
-    }
+    // 设置状态文字
+    self.stateLabel.text = self.stateTitles[@(state)];
 }
 
 - (NSArray<UIView *> *)flipsHorizontallyInOppositeLayoutDirectionViews {
