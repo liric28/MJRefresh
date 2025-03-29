@@ -46,6 +46,11 @@
 
 - (void)textConfiguration {
     // 初始化文字
+    [self setTitle];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(setTitle) name:@"didChangeLanguageNotification" object:nil];
+}
+
+- (void)setTitle {
     [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerIdleText] forState:MJRefreshStateIdle];
     [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerPullingText] forState:MJRefreshStatePulling];
     [self setTitle:[NSBundle mj_localizedStringForKey:MJRefreshTrailerPullingText] forState:MJRefreshStateRefreshing];
